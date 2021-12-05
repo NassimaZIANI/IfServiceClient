@@ -2,7 +2,6 @@ package client;
 
 import java.rmi.RemoteException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Map.Entry;
@@ -22,45 +21,56 @@ public class IfShareClient {
 	
 	public static void main(String[] args) throws ServiceException, RemoteException {
 		ifService = new IfServiceServiceLocator().getIfService();
+		
+		System.out.println("Welcome to our service");
+		System.out.println("\nDo you have an account?");
+		boolean keepGoing = true;
+		int response = 0;
+		while (keepGoing) {
+		    System.out.println("1. yes");
+		    System.out.println("2. no");
+			Scanner scanner = new Scanner(System.in);
+			response = scanner.nextInt();
+		    switch (response) {
+		    	case 1:
+		    		keepGoing = false;
+		    		login();
+		    		break;
+		        case 2:
+		        	keepGoing = false;
+		        	signup();
+		            break;
+		        default:
+		            System.out.println("Unknown option");
+		            break;
+		    }
+	    }
+		
 		Scanner scanner = new Scanner(System.in);
-		login();
-		if (user == null) {
-			System.out.println("Sorry! You have reached the maximum of tries");
-		} else {
+		if (user != null) {
 			System.out.println(user);
+			System.out.println("You have " + ifService.balanceValue(idUser));
 			
 			// currency
-			System.out.println("Please enter your country currency code");
+			System.out.println("\nPlease enter your country currency code");
 			scanner = new Scanner(System.in);
 			String currency = scanner.nextLine();
 			
 			// get all products
 			String[] tab = ifService.getAllProduct();
-			System.out.println("Product List");
+			System.out.println("\nProduct List");
 			if (tab == null) {
-				System.out.println("There is no products");
+				System.out.println("\nThere is no products");
 			} else {
 				for(String i : tab) {
-					System.out.println("id: " + i + " type: " + ifService.getType(i) + " name: " + ifService.getName(i) + " price: " + ifService.getPrice(i, currency));
+					System.out.println("id: " + i + " type: " + ifService.getType(i) + " name: " + ifService.getName(i) + " price: " + ifService.getPrice(i, currency) + " state: " + ifService.getState(i) + " note: " + ifService.getNote(i));
 				}
 			
 				// select product
-				System.out.println("Please select the product's id that you want to buy");
-				scanner = new Scanner(System.in);
-				String idProduct = scanner.nextLine();
-				boolean select = ifService.selectProduct(idProduct);
+				placeOrder(tab, currency);
+				optionMenu(tab, currency);
 				
-				if (select) {
-					
-					// add to cart
-					for(String i : tab) {
-						if (i.equals(idProduct)) {
-							cart.put(idProduct, ifService.getPrice(i, currency));
-						}
-					}
-					
-					// TODO ask if finish
-					
+				if (cart.size() != 0) {
 					// buy products
 					String[] tabId = new String[cart.size()];
 					double priceTotal = 0.0;
@@ -72,31 +82,52 @@ public class IfShareClient {
 						priceTotal += priceCart;
 						i++;
 					}
+					
+					// pay
 					boolean b = ifService.buyProduct(tabId, priceTotal, idUser);
 					
 					// finish buying (result)
 					if (b) {
+						System.out.println("Thank you for your purchase");
 						cart.clear();
-						System.out.println("You have " + ifService.balanceValue(idUser));
+						System.out.println("Your new balance is: " + ifService.balanceValue(idUser));
 					} else {
 						System.out.println("You don't have enough money!");
 					}
-					
 				} else {
-					System.out.println("this product isn't available for now");
+					System.out.println("Your cart is empty!");
 				}
-				
 			}
 		}
 		
-		
-		// TODO
-		// signup or login ?
-		// cart
-		
 	}
 	
+	private static void signup() throws RemoteException {
+		System.out.println("\n///////////////////////");
+		System.out.println("SIGNUP");
+		System.out.println("Please enter your ID : ");
+		Scanner scanner = new Scanner(System.in) ;
+		idUser = scanner.nextInt();
+		System.out.println("Please enter your password : ");
+		scanner = new Scanner(System.in);
+		String password = scanner.nextLine();
+		System.out.println("Please enter your last name : ");
+		scanner = new Scanner(System.in);
+		String lastName = scanner.nextLine();
+		System.out.println("Please enter your first name : ");
+		scanner = new Scanner(System.in);
+		String firstName = scanner.nextLine();
+		boolean sigup = ifService.signUp(idUser, password, firstName, lastName);
+		if (sigup) {
+			login();
+		} else {
+			System.out.println("You already have an account");
+		}
+	}
+
 	public static String login() throws RemoteException {
+		System.out.println("\n///////////////////////");
+		System.out.println("LOGIN");
 		while(loginAttempt !=0 && user == null) {
 			System.out.println("Please enter your ID : ");
 			Scanner scanner = new Scanner(System.in) ;
@@ -110,6 +141,52 @@ public class IfShareClient {
 				System.out.println("Wrong id or password, you have " + loginAttempt + " more tries");
 			}
 		}
+		
+		if(user == null)
+			System.out.println("Sorry! You have reached the maximum of tries");
 		return user;
+	}
+	
+	public static void optionMenu(String tab[], String currency) throws RemoteException{
+		boolean keepGoing = true;
+		int response = 0;
+		while (keepGoing) {
+	    	System.out.println("\nPlease select an option from the menu:");
+		    System.out.println("1. Continue");
+		    System.out.println("2. Finish & pay");
+			Scanner scanner = new Scanner(System.in);
+			response = scanner.nextInt();
+		    switch (response) {
+		    	case 1:
+		    		placeOrder(tab, currency);
+		    		break;
+		        case 2:
+		        	keepGoing = false;
+		            break;
+		        default:
+		            System.out.println("Unknown option");
+		            break;
+		    }
+	    }
+	}
+
+	private static void placeOrder(String tab[], String currency) throws RemoteException {
+		System.out.println("\nPlease select the product's id that you want to buy");
+		Scanner scanner = new Scanner(System.in);
+		String idProduct = scanner.nextLine();
+		boolean select = ifService.selectProduct(idProduct);
+		
+		if (select) {
+			// add to cart
+			for(String i : tab) {
+				if (i.equals(idProduct)) {
+					cart.put(idProduct, ifService.getPrice(i, currency));
+					System.out.println("this product is added to your cart");
+				}
+			}
+			
+		} else {
+			System.out.println("this product isn't available for now or doesn't exist");
+		}
 	}
 }

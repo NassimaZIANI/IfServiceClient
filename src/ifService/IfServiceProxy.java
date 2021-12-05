@@ -50,6 +50,12 @@ public class IfServiceProxy implements ifService.IfService {
     return ifService.getName(id);
   }
   
+  public java.lang.String getState(java.lang.String id) throws java.rmi.RemoteException{
+    if (ifService == null)
+      _initIfServiceProxy();
+    return ifService.getState(id);
+  }
+  
   public java.lang.String getType(java.lang.String id) throws java.rmi.RemoteException{
     if (ifService == null)
       _initIfServiceProxy();
@@ -66,6 +72,12 @@ public class IfServiceProxy implements ifService.IfService {
     if (ifService == null)
       _initIfServiceProxy();
     return ifService.selectProduct(idProduct);
+  }
+  
+  public float getNote(java.lang.String id) throws java.rmi.RemoteException{
+    if (ifService == null)
+      _initIfServiceProxy();
+    return ifService.getNote(id);
   }
   
   public double getPrice(java.lang.String id, java.lang.String currency) throws java.rmi.RemoteException{
